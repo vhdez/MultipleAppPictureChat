@@ -18,11 +18,11 @@ import javax.imageio.ImageIO;
 //   2. If it is the Chat server, send the Image to all Clients.
 
 public class CommunicationHandler implements Runnable {
-    InputStream in;
-    ArrayList clientOutputStreams;
-    BufferedReader reader;
-    boolean isServer;
-    SynchronizedQueue inputQueue;
+    private InputStream in;
+    private ArrayList clientOutputStreams;
+    private BufferedReader reader;
+    private boolean isServer;
+    private SynchronizedQueue inputQueue;
 
     public CommunicationHandler(Socket sock, SynchronizedQueue inQueue, ArrayList streams) {
         inputQueue = inQueue;
@@ -63,15 +63,17 @@ public class CommunicationHandler implements Runnable {
             int r;
             // Try reading from Socket until a new image's size+bytes appears
             while ((r = in.read(sizeArray)) > 0) {
+                System.out.println("PictureChat CommunicationHandler: reading an image");
                 // Read from socket the size of image
                 int size = ByteBuffer.wrap(sizeArray).asIntBuffer().get();
                 // Make a byte array for the image based on the size of the image
                 byte[] imageArray = new byte[size];
                 // Read from socket the image's bytes and turn them into an image
-                in.read(imageArray);
-                Image newImage = SwingFXUtils.toFXImage(ImageIO.read(new ByteArrayInputStream(imageArray)), null);
-                // Put the new image on to the GUI's inputQueue
-                if (newImage != null) {
+                r = in.read(imageArray);
+                if (r > 0) {
+                    Image newImage = SwingFXUtils.toFXImage(ImageIO.read(new ByteArrayInputStream(imageArray)), null);
+                    System.out.println("PictureChat CommunicationHandler: read a " + size + " bytes image");
+                    // Put the new image on to the GUI's inputQueue
                     while (!inputQueue.put(newImage)) {
                         Thread.currentThread().yield();
                     }
