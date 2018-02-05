@@ -2,6 +2,8 @@ package edu.sla.picturechat;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
@@ -35,11 +37,12 @@ public class CommunicationHandler implements Runnable {
     public void run() {
         try {
 // HOW TO READ SIMPLE TEXT FROM SOCKET:
+//            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
 //            String message;
 //            while ((message = reader.readLine()) != null) {
 //                System.out.println("PictureChat CommunicationHandler: read " + message);
-//                while (!inputQueue.put(message)) {
-//                     Thread.currentThread().yield();
+//                while (!outputQueue.put(message)) {
+//                    Thread.currentThread().yield();
 //                }
 //            }
 

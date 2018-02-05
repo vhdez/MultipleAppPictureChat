@@ -5,6 +5,7 @@ import javax.imageio.ImageIO;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
 import java.io.ByteArrayOutputStream;
+import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.ArrayList;
@@ -29,9 +30,6 @@ public class ImageSender implements Runnable {
             }
             // Finally have an image, let's try to send if over the socket
             try {
-                // HOW TO WRITE SIMPLE TEXT TO SOCKET:
-                //writer.println("SAYING HI");
-                //writer.flush();
 
                 // Turn the image into an array of bytes
                 ByteArrayOutputStream imageAsBytes = new ByteArrayOutputStream();
@@ -44,6 +42,10 @@ public class ImageSender implements Runnable {
                 while (allClients.hasNext()) {
                     try {
                         OutputStream nextOut = (OutputStream) allClients.next();
+                        // HOW TO WRITE SIMPLE TEXT TO SOCKET:
+                        //PrintWriter writer = new PrintWriter(nextOut);
+                        //writer.println("SAYING HI");
+                        //writer.flush();
                         // Send the byte size of the image over the socket
                         nextOut.write(size);
                         // Send the image's bytes over the socket
