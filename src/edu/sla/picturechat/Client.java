@@ -1,24 +1,23 @@
 package edu.sla.picturechat;
 
+import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayList;
 import javafx.application.Application;
 import javafx.stage.Stage;
 
 public final class Client extends Application {
-    static BufferedReader reader;
-    static PrintWriter writer;
-    static OutputStream out;
-    static SynchronizedQueue inputQueue;
-    static SynchronizedQueue outputQueue;
+    private static SynchronizedQueue inputQueue;
+    private static SynchronizedQueue outputQueue;
+    private static InputStream socketIn;
+    private static OutputStream socketOut;
 
     @Override
     public void start(final Stage stage) {
-        GUI gui = new GUI("Client", inputQueue, outputQueue);
-        gui.setClientNetworking(reader, writer, out);
+        ArrayList<OutputStream> listWithOneOutputStream = new ArrayList<>();
+        listWithOneOutputStream.add(socketOut);
+        GUI gui = new GUI(false, inputQueue, outputQueue, listWithOneOutputStream);
         gui.run(stage);
     }
 
@@ -26,12 +25,9 @@ public final class Client extends Application {
         try {
             // Set up client-side networking
             Socket sock = new Socket("127.0.0.1", 5000);
-            // reader will be receive images from Server and put them into the SynchronizedQueue
-            InputStreamReader streamReader = new InputStreamReader(sock.getInputStream());
-            reader = new BufferedReader(streamReader);
             // writer will send images to Server as soon as they are gotten from SynchronizedQueue
-            out = sock.getOutputStream();
-            writer = new PrintWriter(out);
+            socketIn = sock.getInputStream();
+            socketOut = sock.getOutputStream();
 
             // Create the queues that will be used for communication
             // inputQueue communicates images from Server to GUIUpdater
@@ -39,8 +35,8 @@ public final class Client extends Application {
             // outputQueue communicates images from GUI to Server
             outputQueue = new SynchronizedQueue();
 
-            // for every new client, run an IncomingDataReceiver on a new thread to receive data from it
-            CommunicationHandler handler = new CommunicationHandler(sock, inputQueue, reader);
+            // Run an CommunicationHandler on a new thread to receive data from the server
+            CommunicationHandler handler = new CommunicationHandler(socketIn, inputQueue);
             Thread handlerThread = new Thread(handler);
             handlerThread.start();
             System.out.println("PictureChat client: created input communication handler");

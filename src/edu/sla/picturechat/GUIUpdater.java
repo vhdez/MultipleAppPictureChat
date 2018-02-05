@@ -3,29 +3,25 @@ package edu.sla.picturechat;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
-import java.io.BufferedReader;
-import java.io.PrintWriter;
-import java.net.Socket;
-
 public class GUIUpdater implements Runnable {
-    private SynchronizedQueue inputQueue;
-    private ImageView GUIimageview;
+    private SynchronizedQueue _inputQueue;
+    private ImageView _imageview;
 
     GUIUpdater(SynchronizedQueue queue, ImageView imageview) {
-        inputQueue = queue;
-        GUIimageview = imageview;
+        _inputQueue = queue;
+        _imageview = imageview;
     }
 
     public void run() {
         while (true) {
             // Ask queue for a file to open
-            Image next = inputQueue.get();
+            Image next = _inputQueue.get();
             while (next == null) {
                 Thread.currentThread().yield();
-                next = inputQueue.get();
+                next = _inputQueue.get();
             }
             // FINALLY I have an Image to do something with
-            GUIimageview.setImage(next);
+            _imageview.setImage(next);
         }
     }
 

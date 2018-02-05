@@ -1,22 +1,22 @@
 package edu.sla.picturechat;
 
-import java.io.PrintWriter;
 import java.io.OutputStream;
 import javax.imageio.ImageIO;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
+import java.util.ArrayList;
 
 public class ImageSender implements Runnable {
     private SynchronizedQueue outputQueue;
-    private PrintWriter writer;
-    private OutputStream out;
+    private ArrayList<OutputStream> clientOutputStreams;
 
-    ImageSender(SynchronizedQueue queue, PrintWriter w, OutputStream stream) {
+    // This is how a server creates an ImageSender (can have many OutputStreams);
+    ImageSender(SynchronizedQueue queue, ArrayList<OutputStream> streams) {
         outputQueue = queue;
-        writer = w;
-        out = stream;
+        clientOutputStreams = streams;
     }
 
     public void run() {
@@ -38,12 +38,23 @@ public class ImageSender implements Runnable {
                 ImageIO.write(SwingFXUtils.fromFXImage(imageToSend, null), "jpg", imageAsBytes);
                 // Calculate number of bytes (size) needed for image (and put tha size into a byte array
                 byte[] size = ByteBuffer.allocate(4).putInt(imageAsBytes.size()).array();
-                // Send the byte size of the image over the socket
-                out.write(size);
-                // Send the image's bytes over the socket
-                out.write(imageAsBytes.toByteArray());
-                // Tell the socket's listener to start reading
-                out.flush();
+                // Send image to all output streams (clients will have 1: the server)
+                //                                  (server will have many: all the clients)
+                Iterator allClients = clientOutputStreams.iterator();
+                while (allClients.hasNext()) {
+                    try {
+                        OutputStream nextOut = (OutputStream) allClients.next();
+                        // Send the byte size of the image over the socket
+                        nextOut.write(size);
+                        // Send the image's bytes over the socket
+                        nextOut.write(imageAsBytes.toByteArray());
+                        // Tell the socket's listener to start reading
+                        nextOut.flush();
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        System.out.println("PictureChat CommunicationHandler: telling all clients failed");
+                    }
+                }
                 System.out.println("PictureChat ImageSender: sent image");
             } catch (Exception ex) {
                 ex.printStackTrace();

@@ -1,18 +1,18 @@
 package edu.sla.picturechat;
 
-import java.io.PrintWriter;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 
 public class ServerNetworking implements Runnable {
-    private ArrayList clientOutputStreams;
+    private ArrayList<OutputStream> clientOutputStreams;
     private int numOfClients = 1;
     private SynchronizedQueue inputQueue;
     private SynchronizedQueue outputQueue;
 
-    public ServerNetworking(SynchronizedQueue inQueue, SynchronizedQueue outQueue) {
-        clientOutputStreams = new ArrayList();
+    ServerNetworking(SynchronizedQueue inQueue, SynchronizedQueue outQueue, ArrayList<OutputStream> clientStreams) {
+        clientOutputStreams = clientStreams;
         inputQueue = inQueue;
         outputQueue = outQueue;
     }
@@ -24,19 +24,20 @@ public class ServerNetworking implements Runnable {
             System.out.println("PictureChat Server: networking is ready");
             while (true) {
                 Socket clientSocket = serverSock.accept();
-                PrintWriter writer = new PrintWriter(clientSocket.getOutputStream());
-                clientOutputStreams.add(writer);
+                // keep track of each client's socket stream, so that server can broadcast to all of them
+                clientOutputStreams.add(clientSocket.getOutputStream());
 
                 // for every new client, run an IncomingDataReceiver on a new thread to receive data from it
-                CommunicationHandler handler = new CommunicationHandler(clientSocket, inputQueue, clientOutputStreams);
+                CommunicationHandler handler = new CommunicationHandler(clientSocket.getInputStream(), inputQueue, outputQueue);
                 Thread handlerThread = new Thread(handler);
-                handlerThread.setName("Server communication thread " + numOfClients);
+                handlerThread.setName("ServerNetworking CommunicationHandler thread " + numOfClients);
+                numOfClients++;
                 handlerThread.start();
-                System.out.println("PictureChat server: accepted client connection");
+                System.out.println("ServerNetworking: accepted client connection");
             }
         } catch(Exception ex){
             ex.printStackTrace();
-            System.out.println("PictureChat server: networking failed.  Exiting...");
+            System.out.println("ServerNetworking: networking failed.  Exiting...");
         }
 
     }

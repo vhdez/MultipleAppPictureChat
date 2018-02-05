@@ -1,54 +1,35 @@
 package edu.sla.picturechat;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Iterator;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
 import javax.imageio.ImageIO;
 
 // CommunicationHandler is a handler thread that reads input Images from a Socket and:
-//   1. Updates put the Image on the Chat app's input queue
-//   2. If it is the Chat server, send the Image to all Clients.
+//   1. Puts the Image on the Chat app's input queue
+//   2. If it is the Chat server, puts the Image on the Chat app's output queue.
 
 public class CommunicationHandler implements Runnable {
     private InputStream in;
-    private ArrayList clientOutputStreams;
-    private BufferedReader reader;
     private boolean isServer;
     private SynchronizedQueue inputQueue;
+    private SynchronizedQueue outputQueue;
 
-    public CommunicationHandler(Socket sock, SynchronizedQueue inQueue, ArrayList streams) {
-        inputQueue = inQueue;
+    // The way Server creates a CommunicationHandler
+    CommunicationHandler(InputStream inStream, SynchronizedQueue inQueue, SynchronizedQueue outQueue) {
         isServer = true;
-        try {
-            in = sock.getInputStream();
-            InputStreamReader incomingDataReader = new InputStreamReader(in);
-            reader = new BufferedReader(incomingDataReader);
-            clientOutputStreams = streams;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            System.out.println("PictureChat CommunicationHandler: Server creation failed");
-        }
+        in = inStream;
+        inputQueue = inQueue;
+        outputQueue = outQueue;
     }
 
-    public CommunicationHandler(Socket sock, SynchronizedQueue inQueue, BufferedReader r) {
+    // The way Client creates a CommunicationHandler
+    CommunicationHandler(InputStream inStream, SynchronizedQueue inQueue) {
         isServer = false;
-        reader = r;
+        in = inStream;
         inputQueue = inQueue;
-        try {
-            in = sock.getInputStream();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            System.out.println("PictureChat CommunicationHandler: Client creation failed");
-        }
-
     }
 
     public void run() {
@@ -57,6 +38,9 @@ public class CommunicationHandler implements Runnable {
 //            String message;
 //            while ((message = reader.readLine()) != null) {
 //                System.out.println("PictureChat CommunicationHandler: read " + message);
+//                while (!inputQueue.put(message)) {
+//                     Thread.currentThread().yield();
+//                }
 //            }
 
             byte[] sizeArray = new byte[4];
@@ -77,13 +61,14 @@ public class CommunicationHandler implements Runnable {
                     while (!inputQueue.put(newImage)) {
                         Thread.currentThread().yield();
                     }
+                    if (isServer) {
+                        // Put the new image on to the server's outputqueue (so that it gets broadcast to all clients)
+                        while (!outputQueue.put(newImage)) {
+                            Thread.currentThread().yield();
+                        }
+                    }
                 } else {
                     System.out.println("PictureChat CommunicationHandler: read empty image?!?!");
-                }
-
-                if (isServer) {
-                    // TODO: relay image to all clients
-                    //tellAllClients(message);
                 }
             }
 
@@ -91,20 +76,6 @@ public class CommunicationHandler implements Runnable {
             ex.printStackTrace();
             System.out.println("PictureChat CommunicationHandler: reading failed");
         }
-
     }
 
-    public void tellAllClients(String message) {
-        Iterator allClients = clientOutputStreams.iterator();
-        while (allClients.hasNext()) {
-            try {
-                PrintWriter writer = (PrintWriter) allClients.next();
-                writer.println(message);
-                writer.flush();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                System.out.println("PictureChat CommunicationHandler: telling all clients failed");
-            }
-        }
-    }
 }
